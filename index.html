@@ -268,8 +268,7 @@ function groupRcdPoints(points, xKey, yKey) {
     for (const p of arr) {
       xs.push(p[xKey]);
       ys.push(p[yKey]);
-      const SCALE = 0.4;
-      sizes.push(p.size ?? 30*SCALE);
+      sizes.push(p.size ?? 10);
       colors.push(toPlotlyColor(p.color));
       texts.push(p.SampleID ?? "");
     }
@@ -515,3 +514,4 @@ document.getElementById("resetBtn").addEventListener("click", () => {
 </body>
 
 </html>
+
