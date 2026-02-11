@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+
+  <!-- EDIT HERE (1): Browser tab title -->
+  <title>RCD Mixing Dashboard</title>
+
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+  <style>
+    /* ============================
+       WHITE THEME (UI)
+       ============================ */
+    :root{
+      --bg:#ffffff;
+      --panel:#f7f7f7;
+      --text:#111111;
+      --muted:#555555;
+      --line:#dddddd;
+      --input:#ffffff;
+      --inputBorder:#cfcfcf;
+      --shadow: 0 6px 18px rgba(0,0,0,0.08);
+    }
+    body{
+      margin:0;
+      font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background:var(--bg);
+      color:var(--text);
+    }
+    .wrap{
+      display:grid;
+      grid-template-columns: 360px 1fr;
+      min-height:100vh;
+    }
+    .side{
+      background:var(--panel);
+      padding:16px;
+      border-right:1px solid var(--line);
+      overflow:auto;
+    }
+    .main{
+      padding:16px;
+      overflow:auto;
+      background:var(--bg);
+    }
+    h1{ font-size:16px; margin:0 0 10px 0; }
+    h2{ font-size:13px; color:var(--muted); margin:14px 0 8px; font-weight:700; }
+    .note{ font-size:12px; color:var(--muted); line-height:1.35; margin-top:10px; }
+    .grid2{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    .row{ margin-bottom:10px; }
+    label{ font-size:12px; color:var(--muted); display:block; margin-bottom:4px; }
+    input[type="number"], input[type="text"]{
+      width:100%;
+      padding:8px;
+      border:1px solid var(--inputBorder);
+      background:var(--input);
+      color:var(--text);
+      border-radius:10px;
+      outline:none;
+    }
+    input[type="range"]{ width:100%; }
+    .btns{ display:flex; gap:10px; margin-top:12px; }
+    button{
+      flex:1;
+      padding:10px;
+      border:1px solid var(--inputBorder);
+      background:#ffffff;
+      color:var(--text);
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:700;
+      box-shadow: var(--shadow);
+    }
+    button:hover{ border-color:#aaaaaa; }
+    .plots{ display:grid; grid-template-columns: 1fr; gap:14px; }
+    .plotbox{
+      background:#ffffff;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:10px;
+      box-shadow: var(--shadow);
+    }
+    .plotTitle{ font-size:13px; color:var(--muted); margin:0 0 6px 6px; font-weight:700; }
+    .tog{ display:flex; align-items:center; gap:8px; margin-top:8px; }
+    .tog input{ width:auto; }
+    .small{ font-size:11px; color:var(--muted); }
+    code{ background:#ffffff; border:1px solid var(--line); border-radius:6px; padding:2px 6px; }
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+  <aside class="side">
+
+    <!-- EDIT HERE (2): Main heading text shown on page -->
+    <h1>Binary isotope mixing (hyperbolic) + RCD overlay</h1>
+
+    <!-- EDIT HERE (3): Description text under heading -->
+    <div class="note">
+      Type endmember A &amp; B compositions and click <b>Update plots</b> to redraw the mixing hyperbola.
+      <br/>RCD points are loaded from <code>rcd_points.json</code>.
+    </div>
+
+    <h2>Endmember A</h2>
+    <div class="grid2">
+      <div class="row"><label>87Sr/86Sr</label><input id="A_Sr_ratio" type="number" step="0.000001" value="0.703965"></div>
+      <div class="row"><label>Sr (ppm)</label><input id="A_Sr_conc" type="number" step="0.01" value="252"></div>
+
+      <div class="row"><label>143Nd/144Nd</label><input id="A_Nd_ratio" type="number" step="0.000001" value="0.512879"></div>
+      <div class="row"><label>Nd (ppm)</label><input id="A_Nd_conc" type="number" step="0.01" value="12.90"></div>
+
+      <div class="row"><label>176Hf/177Hf</label><input id="A_Hf_ratio" type="number" step="0.000001" value="0.28307"></div>
+      <div class="row"><label>Hf (ppm)</label><input id="A_Hf_conc" type="number" step="0.01" value="2.52"></div>
+    </div>
+
+    <h2>Endmember B</h2>
+    <div class="grid2">
+      <div class="row"><label>87Sr/86Sr</label><input id="B_Sr_ratio" type="number" step="0.000001" value="0.710621"></div>
+      <div class="row"><label>Sr (ppm)</label><input id="B_Sr_conc" type="number" step="0.01" value="177.97"></div>
+
+      <div class="row"><label>143Nd/144Nd</label><input id="B_Nd_ratio" type="number" step="0.000001" value="0.510210"></div>
+      <div class="row"><label>Nd (ppm)</label><input id="B_Nd_conc" type="number" step="0.01" value="6.60"></div>
+
+      <div class="row"><label>176Hf/177Hf</label><input id="B_Hf_ratio" type="number" step="0.000001" value="0.280814"></div>
+      <div class="row"><label>Hf (ppm)</label><input id="B_Hf_conc" type="number" step="0.01" value="1.16"></div>
+    </div>
+
+    <h2>Controls</h2>
+    <div class="grid2">
+      <div class="row"><label>Curve points (n)</label><input id="n_curve" type="number" step="100" value="2000"></div>
+      <div class="row"><label>Tick length (fraction of diag)</label><input id="tick_len_frac" type="number" step="0.0005" value="0.002"></div>
+    </div>
+
+    <div class="row">
+      <label>Overlay marker size scale (keeps zeros/blank behavior)</label>
+      <input id="size_scale" type="range" min="0" max="2" step="0.05" value="0.4">
+      <div class="small">Current scale: <span id="size_scale_val">0.40</span></div>
+    </div>
+
+    <div class="tog">
+      <input id="showTicks" type="checkbox" checked>
+      <label for="showTicks" style="margin:0;">Show 10% ticks (10–90%)</label>
+    </div>
+
+    <div class="btns">
+      <button id="updateBtn">Update plots</button>
+      <button id="resetBtn">Reset defaults</button>
+    </div>
+
+    <div class="note small">
+      IMPORTANT: Blank sizes in Excel stay blank (not inflated). Here blank = hidden (size=0).
+      <br/>If you want blanks to show with a default size instead, tell me and I’ll adjust.
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="plots">
+      <div class="plotbox">
+        <!-- EDIT HERE (4): Plot heading text above the chart -->
+        <div class="plotTitle">Sr–Nd mixing</div>
+        <div id="plot_sr_nd" style="height:520px;"></div>
+      </div>
+
+      <div class="plotbox">
+        <div class="plotTitle">Nd–Hf mixing</div>
+        <div id="plot_nd_hf" style="height:520px;"></div>
+      </div>
+
+      <div class="plotbox">
+        <div class="plotTitle">Sr–Hf mixing</div>
+        <div id="plot_sr_hf" style="height:520px;"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ============================
+   Utility
+   ============================ */
+function num(id){
+  const v = parseFloat(document.getElementById(id).value);
+  return Number.isFinite(v) ? v : NaN;
+}
+function linspace(a,b,n){
+  const arr = new Array(n);
+  const step = (b-a)/(n-1);
+  for(let i=0;i<n;i++) arr[i]=a+step*i;
+  return arr;
+}
+function toPlotlyColor(c){
+  if(c===null || c===undefined) return "black";
+  const s = String(c).trim();
+  const map = { "k":"black", "r":"red", "b":"blue", "g":"green", "y":"gold", "c":"cyan", "m":"magenta", "w":"white" };
+  return map[s] || s;
+}
+function toPlotlySymbol(m){
+  if(m===null || m===undefined) return "circle";
+  const s = String(m).trim();
+  const map = {
+    "o":"circle","s":"square","^":"triangle-up","v":"triangle-down",
+    "D":"diamond","d":"diamond","x":"x","X":"x","+":"cross","*":"asterisk",
+    "P":"cross","p":"pentagon"
+  };
+  return map[s] || "circle";
+}
+
+/* concentration-weighted ratio mixing */
+function mixRatio2(fA,fB,CA,RA,CB,RB){
+  const numerator = fA*CA*RA + fB*CB*RB;
+  const denom = fA*CA + fB*CB;
+  return numerator/denom;
+}
+
+function getEndmembers(){
+  const A = {
+    Sr_ratio:num("A_Sr_ratio"), Sr_conc:num("A_Sr_conc"),
+    Nd_ratio:num("A_Nd_ratio"), Nd_conc:num("A_Nd_conc"),
+    Hf_ratio:num("A_Hf_ratio"), Hf_conc:num("A_Hf_conc"),
+  };
+  const B = {
+    Sr_ratio:num("B_Sr_ratio"), Sr_conc:num("B_Sr_conc"),
+    Nd_ratio:num("B_Nd_ratio"), Nd_conc:num("B_Nd_conc"),
+    Hf_ratio:num("B_Hf_ratio"), Hf_conc:num("B_Hf_conc"),
+  };
+  return {A,B};
+}
+function validateEndmembers(end){
+  const keys = ["Sr_ratio","Sr_conc","Nd_ratio","Nd_conc","Hf_ratio","Hf_conc"];
+  for(const k of keys){
+    if(!Number.isFinite(end.A[k]) || !Number.isFinite(end.B[k])) throw new Error(`Invalid endmember value: ${k}`);
+    if(k.endsWith("_conc") && (end.A[k]<=0 || end.B[k]<=0)) throw new Error(`Concentrations must be > 0: ${k}`);
+  }
+}
+
+/* ============================
+   Curve + ticks
+   ============================ */
+function computeCurve(spec,end,nCurve){
+  const fB = linspace(0,1,nCurve);
+  const fA = fB.map(v => 1-v);
+  const x = new Array(nCurve);
+  const y = new Array(nCurve);
+  for(let i=0;i<nCurve;i++){
+    const fa=fA[i], fb=fB[i];
+    x[i] = mixRatio2(fa,fb, end.A[spec.xConc],end.A[spec.xRatio], end.B[spec.xConc],end.B[spec.xRatio]);
+    y[i] = mixRatio2(fa,fb, end.A[spec.yConc],end.A[spec.yRatio], end.B[spec.yConc],end.B[spec.yRatio]);
+  }
+  return {fA,fB,x,y};
+}
+
+function computeTickSegments(curve,tickLenFrac){
+  const levels=[];
+  for(let k=1;k<=9;k++) levels.push(1-0.1*k); // fA=0.9..0.1
+  const {x,y,fB}=curve;
+
+  const xmin=Math.min(...x), xmax=Math.max(...x);
+  const ymin=Math.min(...y), ymax=Math.max(...y);
+  const diag=Math.hypot(xmax-xmin, ymax-ymin);
+  const tickLen=tickLenFrac*diag;
+
+  const segX=[], segY=[];
+  const tickPoints={x:[], y:[], text:[]};
+
+  for(const fA_level of levels){
+    const fB_level=1-fA_level;
+
+    // nearest index
+    let idx=0, best=Infinity;
+    for(let i=0;i<fB.length;i++){
+      const d=Math.abs(fB[i]-fB_level);
+      if(d<best){best=d; idx=i;}
+    }
+
+    const i0=Math.max(0,idx-2);
+    const i1=Math.min(x.length-1,idx+2);
+    const dx=x[i1]-x[i0];
+    const dy=y[i1]-y[i0];
+    const norm=Math.hypot(dx,dy);
+    if(norm===0) continue;
+
+    const tx=dx/norm, ty=dy/norm;
+    const nx=-ty, ny=tx;
+
+    const x0=x[idx]-0.5*tickLen*nx;
+    const x1=x[idx]+0.5*tickLen*nx;
+    const y0=y[idx]-0.5*tickLen*ny;
+    const y1=y[idx]+0.5*tickLen*ny;
+
+    segX.push(x0,x1,null);
+    segY.push(y0,y1,null);
+
+    tickPoints.x.push(x[idx]);
+    tickPoints.y.push(y[idx]);
+    tickPoints.text.push(`fA=${Math.round(fA_level*100)}%  fB=${Math.round((1-fA_level)*100)}%`);
+  }
+
+  return {segX,segY,tickPoints};
+}
+
+/* ============================
+   Overlay points
+   Key fix: NO DEFAULT SIZE.
+   blank size -> 0 (hidden)
+   zero stays zero
+   then apply a user-controlled scale factor
+   ============================ */
+function groupRcdPoints(points,xKey,yKey,sizeScale){
+  const groups=new Map();
+
+  for(const p of points){
+    const xv=p[xKey], yv=p[yKey];
+    if(xv==null || yv==null) continue;
+    if(!Number.isFinite(xv) || !Number.isFinite(yv)) continue;
+
+    const marker=toPlotlySymbol(p.marker);
+    const ec=(p.edgecolor==null) ? "none" : String(p.edgecolor).trim();
+    const ew=(p.edgewidth==null) ? 0 : Number(p.edgewidth);
+    const a =(p.alpha==null) ? 1.0 : Number(p.alpha);
+
+    const key=JSON.stringify({marker,ec,ew,a});
+    if(!groups.has(key)) groups.set(key,[]);
+    groups.get(key).push(p);
+  }
+
+  const traces=[];
+  for(const [key,arr] of groups.entries()){
+    const meta=JSON.parse(key);
+    const xs=[], ys=[], sizes=[], colors=[], texts=[];
+    const lineWidth=(meta.ec.toLowerCase()==="none") ? 0 : (Number.isFinite(meta.ew)? meta.ew : 0);
+
+    for(const p of arr){
+      xs.push(p[xKey]);
+      ys.push(p[yKey]);
+      colors.push(toPlotlyColor(p.color));
+      texts.push(p.SampleID ?? "");
+
+      // IMPORTANT:
+      // - if size is blank/null -> 0 (hidden)
+      // - if size is 0 -> 0 (hidden)
+      // - no default inflation
+      const raw = (p.size === null || p.size === undefined) ? 0 : Number(p.size);
+      const s = (Number.isFinite(raw) ? raw : 0) * sizeScale;
+      sizes.push(s);
+    }
+
+    traces.push({
+      type:"scatter",
+      mode:"markers",
+      x:xs, y:ys,
+      text:texts,
+      hovertemplate:"SampleID=%{text}<br>x=%{x}<br>y=%{y}<extra></extra>",
+      marker:{
+        size:sizes,
+        color:colors,
+        symbol:meta.marker,
+        opacity:meta.a,
+        line:{
+          color:(meta.ec.toLowerCase()==="none") ? "rgba(0,0,0,0)" : toPlotlyColor(meta.ec),
+          width:lineWidth
+        }
+      },
+      showlegend:false
+    });
+  }
+  return traces;
+}
+
+/* ============================
+   Plot specs
+   ============================ */
+const SPECS = {
+  sr_nd: {
+    div:"plot_sr_nd",
+    xData:"iso87Sr86Sr", yData:"iso143Nd144Nd",
+    xRatio:"Sr_ratio", xConc:"Sr_conc",
+    yRatio:"Nd_ratio", yConc:"Nd_conc",
+    xLabel:"⁸⁷Sr/⁸⁶Sr", yLabel:"¹⁴³Nd/¹⁴⁴Nd",
+    xlim:[0.7025,0.711], ylim:[0.5100,0.5131]
+  },
+  nd_hf: {
+    div:"plot_nd_hf",
+    xData:"iso143Nd144Nd", yData:"iso176Hf177Hf",
+    xRatio:"Nd_ratio", xConc:"Nd_conc",
+    yRatio:"Hf_ratio", yConc:"Hf_conc",
+    xLabel:"¹⁴³Nd/¹⁴⁴Nd", yLabel:"¹⁷⁶Hf/¹⁷⁷Hf",
+    xlim:[0.5100,0.5131], ylim:[0.2806,0.2832]
+  },
+  sr_hf: {
+    div:"plot_sr_hf",
+    xData:"iso87Sr86Sr", yData:"iso176Hf177Hf",
+    xRatio:"Sr_ratio", xConc:"Sr_conc",
+    yRatio:"Hf_ratio", yConc:"Hf_conc",
+    xLabel:"⁸⁷Sr/⁸⁶Sr", yLabel:"¹⁷⁶Hf/¹⁷⁷Hf",
+    xlim:[0.7025,0.711], ylim:[0.2806,0.2832]
+  }
+};
+
+let RCD_POINTS = [];
+
+async function loadRcdJson(){
+  // Make sure this matches your repo file name
+  const res = await fetch("rcd_points.json", { cache:"no-store" });
+  if(!res.ok) throw new Error("Could not load rcd_points.json (check file name + location).");
+  const raw = await res.json();
+
+  // normalize numeric fields
+  RCD_POINTS = raw.map(p => {
+    const q = {...p};
+    ["iso87Sr86Sr","iso143Nd144Nd","iso176Hf177Hf","size","alpha","edgewidth"].forEach(k => {
+      if(q[k] !== null && q[k] !== undefined){
+        const v = Number(q[k]);
+        q[k] = Number.isFinite(v) ? v : null;
+      }
+    });
+    return q;
+  });
+}
+
+function plotOne(specKey){
+  const spec = SPECS[specKey];
+  const end = getEndmembers();
+  validateEndmembers(end);
+
+  const nCurve = Math.max(200, Math.floor(num("n_curve")));
+  const tickLenFrac = num("tick_len_frac");
+  const showTicks = document.getElementById("showTicks").checked;
+
+  const sizeScale = parseFloat(document.getElementById("size_scale").value);
+  document.getElementById("size_scale_val").textContent = sizeScale.toFixed(2);
+
+  const curve = computeCurve(spec, end, nCurve);
+  const tick = computeTickSegments(curve, tickLenFrac);
+
+  const overlayTraces = groupRcdPoints(RCD_POINTS, spec.xData, spec.yData, sizeScale);
+
+  const curveTrace = {
+    type:"scatter", mode:"lines",
+    x:curve.x, y:curve.y,
+    line:{ color:"rgba(80,80,80,0.9)", width:2 },
+    hoverinfo:"skip",
+    showlegend:false
+  };
+
+  const tickSegTrace = {
+    type:"scatter", mode:"lines",
+    x:tick.segX, y:tick.segY,
+    line:{ color:"rgba(80,80,80,0.9)", width:2 },
+    hoverinfo:"skip",
+    showlegend:false
+  };
+
+  const tickPointTrace = {
+    type:"scatter", mode:"markers",
+    x:tick.tickPoints.x, y:tick.tickPoints.y,
+    marker:{ size:4, color:"rgba(80,80,80,0.9)" },
+    text:tick.tickPoints.text,
+    hovertemplate:"%{text}<extra></extra>",
+    showlegend:false
+  };
+
+  // Endmember points + labels
+  const Ax = end.A[spec.xRatio], Ay = end.A[spec.yRatio];
+  const Bx = end.B[spec.xRatio], By = end.B[spec.yRatio];
+
+  const endmemberTrace = {
+    type:"scatter",
+    mode:"markers+text",
+    x:[Ax,Bx],
+    y:[Ay,By],
+    marker:{ size:10, color:"rgba(0,0,0,0.55)" },
+    text:["A","B"],
+    textposition:"top center",
+    textfont:{ color:"rgba(0,0,0,0.85)", size:14 },
+    hovertemplate:"%{text}<br>x=%{x}<br>y=%{y}<extra></extra>",
+    showlegend:false
+  };
+
+  const data = [
+    ...overlayTraces,
+    curveTrace,
+    ...(showTicks ? [tickSegTrace, tickPointTrace] : []),
+    endmemberTrace
+  ];
+
+  // WHITE plot theme
+  const layout = {
+    paper_bgcolor:"#ffffff",
+    plot_bgcolor:"#ffffff",
+    margin:{ l:70, r:20, t:10, b:60 },
+    xaxis:{
+      title:spec.xLabel,
+      range:spec.xlim,
+      zeroline:false,
+      gridcolor:"rgba(0,0,0,0.08)",
+      linecolor:"rgba(0,0,0,0.25)",
+      tickcolor:"rgba(0,0,0,0.35)",
+      tickfont:{ color:"rgba(0,0,0,0.85)" },
+      titlefont:{ color:"rgba(0,0,0,0.9)" }
+    },
+    yaxis:{
+      title:spec.yLabel,
+      range:spec.ylim,
+      zeroline:false,
+      gridcolor:"rgba(0,0,0,0.08)",
+      linecolor:"rgba(0,0,0,0.25)",
+      tickcolor:"rgba(0,0,0,0.35)",
+      tickfont:{ color:"rgba(0,0,0,0.85)" },
+      titlefont:{ color:"rgba(0,0,0,0.9)" }
+    },
+    hovermode:"closest"
+  };
+
+  Plotly.newPlot(spec.div, data, layout, {responsive:true, displayModeBar:true});
+}
+
+function plotAll(){
+  plotOne("sr_nd");
+  plotOne("nd_hf");
+  plotOne("sr_hf");
+}
+
+function resetDefaults(){
+  const defaults = {
+    A_Sr_ratio:0.703965, A_Sr_conc:252,
+    A_Nd_ratio:0.512879, A_Nd_conc:12.90,
+    A_Hf_ratio:0.28307,  A_Hf_conc:2.52,
+    B_Sr_ratio:0.710621, B_Sr_conc:177.97,
+    B_Nd_ratio:0.510210, B_Nd_conc:6.60,
+    B_Hf_ratio:0.280814, B_Hf_conc:1.16,
+    n_curve:2000, tick_len_frac:0.002,
+    size_scale:0.40
+  };
+  for(const [k,v] of Object.entries(defaults)){
+    const el = document.getElementById(k);
+    if(el) el.value = v;
+  }
+  document.getElementById("showTicks").checked = true;
+  document.getElementById("size_scale_val").textContent = (parseFloat(defaults.size_scale)).toFixed(2);
+}
+
+/* events */
+document.getElementById("updateBtn").addEventListener("click", () => {
+  try{ plotAll(); } catch(e){ alert(e.message); }
+});
+document.getElementById("resetBtn").addEventListener("click", () => {
+  resetDefaults();
+  try{ plotAll(); } catch(e){ alert(e.message); }
+});
+document.getElementById("size_scale").addEventListener("input", () => {
+  // live update without clicking update
+  try{ plotAll(); } catch(e){ /* ignore */ }
+});
+
+/* boot */
+(async function boot(){
+  try{
+    await loadRcdJson();
+    plotAll();
+  }catch(e){
+    alert(e.message);
+  }
+})();
+</script>
+</body>
+</html>
